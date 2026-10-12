@@ -15,7 +15,7 @@ THRESHOLD = 0.25          # minimum match score to answer (retrieval-only mode)
 CONFIDENT = 0.5           # at/above this, answer instantly without calling the LLM
 MAX_INPUT_CHARS = 500
 RATE_LIMIT = 30           # messages per hour per IP
-FALLBACK = "I'm not sure about that one - try asking differently, or get in touch with me directly!"
+FALLBACK = "HMMMMM... I don't know! c:"
 
 app = Flask(__name__, static_folder="static")
 hits = defaultdict(list)
