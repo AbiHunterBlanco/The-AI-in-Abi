@@ -1,13 +1,13 @@
-# How I speak
+# How I speak (EDIT THIS)
 
-- Tone: Friendly, lots of puns
-- Sentence length: Long and rambling
-- Words and phrases I often use: You know
-- Things I never say: 
+- Tone: (e.g. friendly, dry humour, relaxed)
+- Sentence length: (short and punchy / long and rambling)
+- Words and phrases I often use: (e.g. "honestly", "to be fair")
+- Things I never say: (e.g. corporate jargon)
 
 ## Example replies in my voice
 Q: What do you do?
-A: I do too many things!!
+A: (Write how you'd actually answer)
 
 Q: What are you into outside of work?
-A: I love being creative
+A: (Write how you'd actually answer)

@@ -11,10 +11,11 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 BASE = Path(__file__).parent
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL")  # optional, e.g. "llama3.2:1b". Unset = retrieval mode.
-THRESHOLD = 0.25          # minimum match score to answer
+THRESHOLD = 0.25          # minimum match score to answer (retrieval-only mode)
+CONFIDENT = 0.5           # at/above this, answer instantly without calling the LLM
 MAX_INPUT_CHARS = 500
 RATE_LIMIT = 30           # messages per hour per IP
-FALLBACK = "HMMM... I don't know! c:"
+FALLBACK = "I'm not sure about that one - try asking differently, or get in touch with me directly!"
 
 app = Flask(__name__, static_folder="static")
 hits = defaultdict(list)
@@ -38,7 +39,8 @@ def load_qa():
     return entries
 
 
-def retrieval_reply(question):
+def retrieve(question):
+    """Return (answer, score) for the best matching qa.md entry."""
     entries = load_qa()
     triggers, owners = [], []
     for i, (qs, _) in enumerate(entries):
@@ -50,9 +52,9 @@ def retrieval_reply(question):
         matrix = vec.fit_transform(triggers)
         scores = cosine_similarity(vec.transform([question]), matrix)[0]
     except ValueError:
-        return FALLBACK
+        return FALLBACK, 0.0
     best = scores.argmax()
-    return entries[owners[best]][1] if scores[best] >= THRESHOLD else FALLBACK
+    return entries[owners[best]][1], float(scores[best])
 
 
 def ollama_reply(messages):
@@ -65,6 +67,8 @@ def ollama_reply(messages):
     )
     body = json.dumps({
         "model": OLLAMA_MODEL, "stream": False,
+        "keep_alive": "30m",
+        "options": {"num_predict": 120},
         "messages": [{"role": "system", "content": system}] + messages,
     }).encode()
     req = urllib.request.Request(
@@ -101,12 +105,15 @@ def chat():
     if not messages or messages[-1]["role"] != "user":
         return jsonify(error="No question received."), 400
 
-    if OLLAMA_MODEL:
+    answer, score = retrieve(messages[-1]["content"])
+    if score >= CONFIDENT:                      # fast path: instant, in your own words
+        return jsonify(reply=answer)
+    if OLLAMA_MODEL:                            # slow path: only for unfamiliar questions
         try:
-            return jsonify(reply=ollama_reply(messages))
+            return jsonify(reply=ollama_reply(messages[-6:]))
         except Exception:
-            pass  # Ollama not running: fall back to retrieval
-    return jsonify(reply=retrieval_reply(messages[-1]["content"]))
+            pass                                # Ollama not running
+    return jsonify(reply=answer if score >= THRESHOLD else FALLBACK)
 
 
 if __name__ == "__main__":
