@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ask me anything</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#f0f0f0; --accent:#2b6cb0; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#161616; --fg:#eee; --muted:#262626; --accent:#63b3ed; } }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 system-ui, sans-serif; }
+  main { max-width:640px; margin:0 auto; padding:24px 16px; display:flex; flex-direction:column; height:100vh; box-sizing:border-box; }
+  h1 { font-size:1.2rem; margin:0 0 12px; }
+  #log { flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; }
+  .msg { padding:8px 12px; border-radius:12px; max-width:85%; background:var(--muted); white-space:pre-wrap; }
+  .user { align-self:flex-end; background:var(--accent); color:#fff; }
+  #row { display:flex; gap:8px; margin-top:12px; }
+  input { flex:1; padding:10px; font:inherit; border:1px solid var(--muted); border-radius:8px; background:var(--bg); color:var(--fg); }
+  button { padding:10px 16px; font:inherit; border:0; border-radius:8px; background:var(--accent); color:#fff; cursor:pointer; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Ask me anything</h1>
+  <div id="log"></div>
+  <form id="row">
+    <input id="q" maxlength="500" placeholder="e.g. What projects have you worked on?" autocomplete="off">
+    <button>Send</button>
+  </form>
+</main>
+<script>
+const log = document.getElementById("log"), q = document.getElementById("q");
+const history = [];
+
+function add(text, cls) {
+  const d = document.createElement("div");
+  d.className = "msg " + cls;
+  d.textContent = text;
+  log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
+  return d;
+}
+
+add("Hi! Ask me about my work, projects or interests.", "bot");
+
+document.getElementById("row").addEventListener("submit", async e => {
+  e.preventDefault();
+  const text = q.value.trim();
+  if (!text) return;
+  q.value = "";
+  add(text, "user");
+  history.push({ role: "user", content: text });
+  const pending = add("...", "bot");
+  try {
+    const r = await fetch("/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: history })
+    });
+    const data = await r.json();
+    pending.textContent = data.reply || data.error;
+    if (data.reply) history.push({ role: "assistant", content: data.reply });
+  } catch {
+    pending.textContent = "Couldn't reach the server.";
+  }
+});
+</script>
+</body>
+</html>
